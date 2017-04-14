@@ -39,7 +39,7 @@ class Node(object):
 
     def __eq__(self, other):
         return self.number == other.number and self.children == other.children
-     
+
     def add_child(self, obj):
         self.children.append(obj)
 
@@ -75,7 +75,7 @@ class Stack:
     def size(self):
         return len(self.items)
 
-        
+
 #This function creates all the children for a given node
 def child_creator(parent):
     pnum = parent.get_number()
@@ -83,7 +83,7 @@ def child_creator(parent):
 
     up = pnum + 100
     down = pnum - 100
-    
+
     if (pnum < 900 and pchange is not 1):
         childA = Node(down, 1, parent)
         parent.add_child(childA)
@@ -116,7 +116,7 @@ def child_creator(parent):
         childF = Node(pones_up, 3, parent)
         parent.add_child(childF)
 
-    return 
+    return
 
 
 def print_answer(expanded, goal):
@@ -130,15 +130,15 @@ def print_answer(expanded, goal):
     while (temp.get_parent() is not None):
         exp_nodes.append(temp.get_parent().get_number())
         temp = temp.get_parent()
- 
-    exp_nodes.reverse() 
+
+    exp_nodes.reverse()
     for i in range(1, len(exp_nodes)):
         path_string = path_string + "," + str(exp_nodes[i])
-    
+
     for i in range(1, len(expanded)):
         exp_string = exp_string + "," + str(expanded[i].get_number())
 
-    print(path_string) 
+    print(path_string)
     print(exp_string)
 
 
@@ -150,14 +150,14 @@ def multicheck(node, expanded):
     elif (len(expanded) >= 1000):
         print("No solution found.")
         return 2
-    
+
     return 0
-    
+
 def bfs(root):
     expanded = []
     fringe = Queue()
 
-    fringe.put(root) 
+    fringe.put(root)
 
     while not fringe.empty():
         node = fringe.get()
@@ -170,7 +170,7 @@ def bfs(root):
 
         current = node.get_number()
         expanded.append(node)
-       
+
         if (current is target):
             break
         else:
@@ -183,13 +183,13 @@ def bfs(root):
 def dfs(root):
     fringe = Stack()
     expanded = []
-    
-    fringe.push(root) 
+
+    fringe.push(root)
 
     while not fringe.empty():
         node = fringe.pop()
         child_creator(node)
-        
+
         if (multicheck(node, expanded) == 1):
             continue
         elif(multicheck(node, expanded) == 2):
@@ -197,15 +197,15 @@ def dfs(root):
 
         current = node.get_number()
         expanded.append(node)
-       
+
         if (current is target):
             break
         else:
             while (len(node.get_children()) > 0):
                 fringe.push(node.get_children().pop())
 
-        child_creator(node) 
-        #This crude hack is necessary to get the ordering of the 
+        child_creator(node)
+        #This crude hack is necessary to get the ordering of the
         #  children correct in the expanded list
 
     return expanded, node
@@ -228,17 +228,20 @@ def read_input():
 
         forbidden = []
 
-        for i in (last.split(",")):
-            forbidden.append(int(i))
+        if last == '':
+            return
+        else:
+            for i in (last.split(",")):
+                forbidden.append(int(i))
 
 
 def manhattan(number):
     t_hun = int(target / 100)
-    t_ten = int((target % 100) / 10) 
+    t_ten = int((target % 100) / 10)
     t_one = (target % 100) % 10
 
     s_hun = int(number / 100)
-    s_ten = int((number % 100) / 10) 
+    s_ten = int((number % 100) / 10)
     s_one = (number % 100) % 10
 
     dist = (abs(t_hun - s_hun) + abs(t_ten - s_ten) + abs(t_one - s_one))
@@ -249,7 +252,7 @@ def main():
     manhattan(start)
     #This initialises the root node. Needed for every algorithm
     root = Node(start, 4, None)
-   
+
     if method == 'bfs':
         ### BFS ###
         expanded, goal = bfs(root)
