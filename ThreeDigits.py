@@ -16,16 +16,19 @@
 #       - A*
 # - Handle choosing a particular method
 # - Expanded list can only contain 1,000 nodes
+# - Implement a priority queue
+# - Read the chosen method from the command line
 #======================
 
 ####    NOTES   ####
 # if __name__ == "__main__"-> what the hell is this
-from queue import Queue
+from queue import Queue, PriorityQueue
 import sys
 
 start = 000
 target = 000
 forbidden = []
+method = ""
 
 class Node(object):
     def __init__(self, number, changed, parent):
@@ -139,6 +142,17 @@ def print_answer(expanded, goal):
     print(exp_string)
 
 
+def multicheck(node, expanded):
+    if (node in expanded):
+        return 1
+    elif (node.get_number() in forbidden):
+        return 1
+    elif (len(expanded) >= 1000):
+        print("No solution found.")
+        return 2
+    
+    return 0
+    
 def bfs(root):
     expanded = []
     fringe = Queue()
@@ -147,13 +161,13 @@ def bfs(root):
 
     while not fringe.empty():
         node = fringe.get()
-
-        if (node in expanded):
-            continue
-        elif (node.get_number() in forbidden):
-            continue
-
         child_creator(node)
+
+        if (multicheck(node, expanded) == 1):
+            continue
+        elif(multicheck(node, expanded) == 2):
+            return
+
         current = node.get_number()
         expanded.append(node)
        
@@ -174,13 +188,13 @@ def dfs(root):
 
     while not fringe.empty():
         node = fringe.pop()
-        
-        if (node in expanded):
-            continue
-        elif (node.get_number() in forbidden):
-            continue
-        
         child_creator(node)
+        
+        if (multicheck(node, expanded) == 1):
+            continue
+        elif(multicheck(node, expanded) == 2):
+            return
+
         current = node.get_number()
         expanded.append(node)
        
@@ -190,10 +204,19 @@ def dfs(root):
             while (len(node.get_children()) > 0):
                 fringe.push(node.get_children().pop())
 
+        child_creator(node) 
+        #This crude hack is necessary to get the ordering of the 
+        #  children correct in the expanded list
+
     return expanded, node
 
 
 def read_input():
+    global method
+    method = sys.argv[1]
+    method = method.lower()
+    method = method.strip()
+
     with open(sys.argv[2], 'r') as infile:
         global start
         global target
@@ -209,24 +232,32 @@ def read_input():
             forbidden.append(int(i))
 
 
-def main():
-    print("ThreeDigits started.")
-    read_input()
-    print("Start is " + str(start) + ".")
-    print("Target is " + str(target) + ".")
+def manhattan(number):
+    t_hun = int(target / 100)
+    t_ten = int((target % 100) / 10) 
+    t_one = (target % 100) % 10
 
+    s_hun = int(number / 100)
+    s_ten = int((number % 100) / 10) 
+    s_one = (number % 100) % 10
+
+    dist = (abs(t_hun - s_hun) + abs(t_ten - s_ten) + abs(t_one - s_one))
+
+
+def main():
+    read_input()
+    manhattan(start)
     #This initialises the root node. Needed for every algorithm
     root = Node(start, 4, None)
    
-    ### BFS ###
-    expanded, goal = bfs(root)
-    print("###    BFS    ###")
-    print_answer(expanded, goal)
-
-    ### DFS ###
-    ex2, goal2 = dfs(root)
-    print("###   DFS   ###")
-    print_answer(ex2, goal2)
+    if method == 'bfs':
+        ### BFS ###
+        expanded, goal = bfs(root)
+        print_answer(expanded, goal)
+    elif method == 'dfs':
+        ### DFS ###
+        ex2, goal2 = dfs(root)
+        print_answer(ex2, goal2)
 
     return;
 
