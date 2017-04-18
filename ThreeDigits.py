@@ -24,6 +24,7 @@
 # if __name__ == "__main__"-> what the hell is this
 from queue import Queue, PriorityQueue
 import sys
+import time
 
 start = 000
 target = 000
@@ -32,11 +33,12 @@ method = ""
 
 
 class Node(object):
-    def __init__(self, number, changed, parent):
+    def __init__(self, number, changed, parent, depth):
         self.number = number
         self.children = []
         self.changed = changed  # digit that was changed, range is [1-3]
         self.parent = parent
+        self.depth = depth
 
     def __eq__(self, other):
         return self.number == other.number and self.children == other.children
@@ -55,6 +57,9 @@ class Node(object):
 
     def get_parent(self):
         return self.parent
+
+    def get_depth(self):
+        return self.depth
 
 
 class Stack:
@@ -86,11 +91,11 @@ def child_creator(parent):
     down = pnum - 100
 
     if pnum < 900 and pchange is not 1:
-        childA = Node(down, 1, parent)
+        childA = Node(down, 1, parent, parent.depth + 1)
         parent.add_child(childA)
 
     if pnum > 200 and pchange is not 1:
-        childB = Node(up, 1, parent)
+        childB = Node(up, 1, parent, parent.depth + 1)
         parent.add_child(childB)
 
     ptens = pnum % 100
@@ -98,11 +103,11 @@ def child_creator(parent):
     ptens_down = pnum - 10
 
     if ptens < 90 and pchange is not 2:
-        childC = Node(ptens_down, 2, parent)
+        childC = Node(ptens_down, 2, parent, parent.depth + 1)
         parent.add_child(childC)
 
     if ptens > 19 and pchange is not 2:
-        childD = Node(ptens_up, 2, parent)
+        childD = Node(ptens_up, 2, parent, parent.depth + 1)
         parent.add_child(childD)
 
     pones = ptens % 10
@@ -110,11 +115,11 @@ def child_creator(parent):
     pones_down = pnum - 1
 
     if pones > 1 and pchange is not 3:
-        childE = Node(pones_down, 3, parent)
+        childE = Node(pones_down, 3, parent, parent.depth + 1)
         parent.add_child(childE)
 
     if pones < 9 and pchange is not 3:
-        childF = Node(pones_up, 3, parent)
+        childF = Node(pones_up, 3, parent, parent.depth + 1)
         parent.add_child(childF)
 
     return
@@ -177,7 +182,7 @@ def bfs(root):
         current = node.get_number()
         expanded.append(node)
 
-        if (current is target):
+        if current is target:
             break
         else:
             for child in node.get_children():
@@ -244,7 +249,9 @@ def read_input():
                 forbidden.append(int(i))
 
 
-def manhattan(number):
+def manhattan(node):
+    number = node.get_number()
+
     t_hun = int(target / 100)
     t_ten = int((target % 100) / 10)
     t_one = (target % 100) % 10
@@ -254,14 +261,95 @@ def manhattan(number):
     s_one = (number % 100) % 10
 
     dist = (abs(t_hun - s_hun) + abs(t_ten - s_ten) + abs(t_one - s_one))
+    return dist
+
+
+# A star also needs to use the path cost (which is just the depth here)
+def astar(root):
+    fringe = PriorityQueue()
+    expanded = []
+
+    fringe.put((0, time.time() * -1, root))
+
+    # PriorityQueue: an entry is a tuple of the form (priority_number, data)
+
+    while not fringe.empty():
+        priority, temp_time, node = fringe.get()
+        print("Current node is", node.get_number(), "with priority", priority, ".")
+        another_q = fringe
+        templist = []
+        while not another_q.empty():
+            templist.append(another_q.get())
+
+        if len(templist) > 0:
+            print("currently in the fringe there are the following nodes")
+
+        for i in templist:
+            print(i[0], i[1], i[2].get_number())
+
+        child_creator(node)
+
+        if multicheck(node, expanded) == 1:
+            print("Skipping", node.get_number())
+            continue
+        elif multicheck(node, expanded) == 2:
+            return
+
+        current = node.get_number()
+        expanded.append(node)
+
+        if current is target:
+            break
+        else:
+            print("There are", len(node.get_children()), "children")
+            for child in node.get_children():
+                priority = manhattan(child)
+                print("Adding child", child.get_number(), "with priority", priority)
+                fringe.put((priority, time.time() * -1, child))
+
+    return expanded, node
+
+
+def greedy(root):
+    child_creator(root)
+    expanded = []
+    fringe = PriorityQueue()
+
+    fringe.put((0, time.time() * -1, root))
+
+    # PriorityQueue: an entry is a tuple of the form (priority_number, data)
+
+    while not fringe.empty():
+
+        priority, temp_time, node = fringe.get()
+        child_creator(node)
+        if multicheck(node, expanded) == 1:
+            continue
+        elif multicheck(node, expanded) == 2:
+            return
+
+        current = node.get_number()
+        expanded.append(node)
+
+        if current is target:
+            while not fringe.empty():
+                triplet = fringe.get()
+                print(triplet[0], triplet[1], triplet[2].get_number())
+            break
+        else:
+            for child in node.get_children():
+                priority = manhattan(child)
+                fringe.put((priority, time.time() * -1, child))
+
+    return expanded, node
 
 
 def main():
     read_input()
-    manhattan(start)
     # This initialises the root node. Needed for every algorithm
-    root = Node(start, 4, None)
-
+    root = Node(start, 4, None, 0)
+    end = Node(target, 4, None, 0)
+    print("The distance of", target, "from 110 is", manhattan(end))
     if method == 'debug':
         print("### BFS ###")
         expanded, goal = bfs(root)
@@ -270,6 +358,16 @@ def main():
         print("### DFS ###")
         ex2, goal2 = dfs(root)
         print_answer(ex2, goal2)
+
+        print("### Greedy ###")
+        root = Node(start, 4, None, 0)
+        ex4, goal4 = greedy(root)
+        print_answer(ex4, goal4)
+
+        # print("### A* ###")
+        # root = Node(start, 4, None, 0)
+        # ex3, goal3 = astar(root)
+        # print_answer(ex3, goal3)
     elif method == 'bfs':
         # BFS
         expanded, goal = bfs(root)
@@ -278,8 +376,13 @@ def main():
         # DFS
         ex2, goal2 = dfs(root)
         print_answer(ex2, goal2)
+    elif method == 'astar':
+        # A*
 
-    return
+        ex3, goal3 = astar(root)
+        print_answer(ex3, goal3)
+
+    return 0
 
 
 main()
