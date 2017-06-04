@@ -11,13 +11,10 @@
 #   === TODO LIST ===
 # -  Implement the following algorithms
 #       - IDS
-#       - Greedy
 #       - Hill-Climbing
-#       - A*
-# - Handle choosing a particular method
-# - Expanded list can only contain 1,000 nodes
-# - Implement a priority queue
-# - Read the chosen method from the command line
+# -  Print the expanded nodes even when no solution is found
+# -  Print single digits correctly (e.g. start 000, goal 001)
+# -  Split printing expanded and goal path
 # ======================
 
 #    === NOTES ===
@@ -84,17 +81,19 @@ class Stack:
 
 # This function creates all the children for a given node
 def child_creator(parent):
+    # Cannot add to 9
+    # Cannot subtract from 0
     pnum = parent.get_number()
     pchange = parent.get_changed()
 
     up = pnum + 100
     down = pnum - 100
 
-    if pnum < 900 and pchange is not 1:
+    if pnum > 99 and pchange is not 1:
         childA = Node(down, 1, parent, parent.depth + 1)
         parent.add_child(childA)
 
-    if pnum > 200 and pchange is not 1:
+    if pnum < 900 and pchange is not 1:
         childB = Node(up, 1, parent, parent.depth + 1)
         parent.add_child(childB)
 
@@ -102,11 +101,11 @@ def child_creator(parent):
     ptens_up = pnum + 10
     ptens_down = pnum - 10
 
-    if ptens < 90 and pchange is not 2:
+    if ptens > 9 and pchange is not 2:
         childC = Node(ptens_down, 2, parent, parent.depth + 1)
         parent.add_child(childC)
 
-    if ptens > 19 and pchange is not 2:
+    if ptens < 90 and pchange is not 2:
         childD = Node(ptens_up, 2, parent, parent.depth + 1)
         parent.add_child(childD)
 
@@ -114,7 +113,7 @@ def child_creator(parent):
     pones_up = pnum + 1
     pones_down = pnum - 1
 
-    if pones > 1 and pchange is not 3:
+    if pones > 0 and pchange is not 3:
         childE = Node(pones_down, 3, parent, parent.depth + 1)
         parent.add_child(childE)
 
@@ -125,26 +124,42 @@ def child_creator(parent):
     return
 
 
+def str_format(number):
+    num_str = str(number)
+    if number < 100 and int(number / 10) == 0:
+        num_str = "0" + num_str
+
+    if int(number / 100) == 0:
+        num_str = "0" + num_str
+    return num_str
+
+
 def print_answer(expanded, goal):
     # This is the string of the path from the start to the goal
-    exp_nodes = [goal.get_number()]
-    path_string = "" + str(expanded[0].get_number())
+    path_string = "" + str_format(expanded[0].get_number())
     # This is the string of expanded nodes
-    exp_string = "" + str(expanded[0].get_number())
+    exp_string = "" + str_format(expanded[0].get_number())
 
-    temp = goal
-    while temp.get_parent() is not None:
-        exp_nodes.append(temp.get_parent().get_number())
-        temp = temp.get_parent()
+    if goal is None:
+        path_string = "No solution found."
+    else:
+        exp_nodes = [goal.get_number()]
 
-    exp_nodes.reverse()
-    for i in range(1, len(exp_nodes)):
-        path_string = path_string + "," + str(exp_nodes[i])
+        temp = goal
+        while temp.get_parent() is not None:
+            exp_nodes.append(temp.get_parent().get_number())
+            temp = temp.get_parent()
 
-    for i in range(1, len(expanded)):
-        exp_string = exp_string + "," + str(expanded[i].get_number())
+        exp_nodes.reverse()
+        for i in range(1, len(exp_nodes)):
+            num_str = str_format(exp_nodes[i])
+            path_string = path_string + "," + num_str
 
     print(path_string)
+
+    for i in range(1, len(expanded)):
+        exp_string = exp_string + "," + str_format(expanded[i].get_number())
+
     print(exp_string)
 
 
@@ -158,8 +173,8 @@ def multicheck(node, expanded):
     elif node.get_number() in forbidden:
         return 1
     elif len(expanded) >= 1000:
-        print("No solution found.")
-        return 2
+        print_answer(expanded, None)
+        raise SystemExit
 
     return 0
 
@@ -176,13 +191,11 @@ def bfs(root):
 
         if multicheck(node, expanded) == 1:
             continue
-        elif multicheck(node, expanded) == 2:
-            return
 
         current = node.get_number()
         expanded.append(node)
 
-        if current is target:
+        if current == target:
             break
         else:
             for child in node.get_children():
@@ -203,13 +216,11 @@ def dfs(root):
 
         if multicheck(node, expanded) == 1:
             continue
-        elif multicheck(node, expanded) == 2:
-            return
 
         current = node.get_number()
         expanded.append(node)
 
-        if current is target:
+        if current == target:
             break
         else:
             while len(node.get_children()) > 0:
@@ -269,72 +280,46 @@ def astar(root):
     fringe = PriorityQueue()
     expanded = []
 
-    fringe.put((0, time.time() * -1, root))
+    fringe.put((0, 0, root))
 
     # PriorityQueue: an entry is a tuple of the form (priority_number, data)
 
     while not fringe.empty():
-        priority, temp_time, node = fringe.get()
-        print("Current node is", node.get_number(), "with priority", priority, ".")
-        another_q = fringe
-        templist = []
-        while not another_q.empty():
-            templist.append(another_q.get())
-
-        if len(templist) > 0:
-            print("currently in the fringe there are the following nodes")
-
-        for i in templist:
-            print(i[0], i[1], i[2].get_number())
-
+        node = fringe.get()[2]
         child_creator(node)
 
         if multicheck(node, expanded) == 1:
-            print("Skipping", node.get_number())
             continue
-        elif multicheck(node, expanded) == 2:
-            return
 
         current = node.get_number()
         expanded.append(node)
 
-        if current is target:
+        if current == target:
             break
         else:
-            print("There are", len(node.get_children()), "children")
             for child in node.get_children():
                 priority = manhattan(child)
-                print("Adding child", child.get_number(), "with priority", priority)
-                fringe.put((priority, time.time() * -1, child))
+                fringe.put((priority + child.depth, time.time() * -1, child))
 
     return expanded, node
 
 
 def greedy(root):
-    child_creator(root)
-    expanded = []
     fringe = PriorityQueue()
-
-    fringe.put((0, time.time() * -1, root))
-
-    # PriorityQueue: an entry is a tuple of the form (priority_number, data)
+    expanded = []
+    fringe.put((0, 0, root))
 
     while not fringe.empty():
-
-        priority, temp_time, node = fringe.get()
+        node = fringe.get()[2]
         child_creator(node)
+
         if multicheck(node, expanded) == 1:
             continue
-        elif multicheck(node, expanded) == 2:
-            return
 
         current = node.get_number()
         expanded.append(node)
 
-        if current is target:
-            while not fringe.empty():
-                triplet = fringe.get()
-                print(triplet[0], triplet[1], triplet[2].get_number())
+        if current == target:
             break
         else:
             for child in node.get_children():
@@ -342,6 +327,89 @@ def greedy(root):
                 fringe.put((priority, time.time() * -1, child))
 
     return expanded, node
+
+
+def hill(root):
+    # 1. Set the current node to the initial state S
+    # 2. Generate the successors of n
+    # 3. Select the best successor n_best
+    # 4. If child is worse than parent, return parent
+    # 5. If child is better than parent, set n to n_best and go to step 2
+
+    fringe = PriorityQueue()
+    expanded = []
+    goal_found = False # This is 0 when the goal is found, and 1 otherwise
+
+    node = root
+
+    while not goal_found:
+        heur_parent = manhattan(node)
+        child_creator(node)
+        expanded.append(node)
+
+        if node.get_number() == target:
+            goal_found = True
+        else:
+            for child in node.get_children():
+                priority = manhattan(child)
+                fringe.put((priority, time.time() * -1, child))
+
+            forbidden_flag = True
+            while forbidden_flag:
+                heur_child, temp_time, best_child = fringe.get()
+                if best_child.get_number() in forbidden:
+                    continue
+                else:
+                    forbidden_flag = False
+
+            if heur_child >= heur_parent:
+                return expanded, None
+            else:
+                node = best_child
+
+    return expanded, node
+
+
+def ids(root):
+    l = 0
+    goal_found = False
+    expanded = []
+
+    while not goal_found:
+        fringe = Stack()
+        temp_expand = []
+        fringe.push(root)
+
+        while not fringe.empty():
+            node = fringe.pop()
+            root.children = []
+            child_creator(node)
+
+            if multicheck(node, temp_expand) == 1:
+                continue
+            elif len(expanded) >= 1000:
+                print_answer(expanded, None)
+                raise SystemExit
+
+            current = node.get_number()
+            expanded.append(node)
+            temp_expand.append(node)
+            if current == target:
+                goal_found = True
+                break
+            elif l > node.get_depth():
+                while len(node.get_children()) > 0:
+                    child = node.get_children().pop()
+                    fringe.push(child)
+
+            child_creator(node)
+            # This crude hack is necessary to get the ordering of the
+            #  children correct in the expanded list
+
+        l += 1
+
+    return expanded, node
+
 
 
 def main():
@@ -349,7 +417,7 @@ def main():
     # This initialises the root node. Needed for every algorithm
     root = Node(start, 4, None, 0)
     end = Node(target, 4, None, 0)
-    print("The distance of", target, "from 110 is", manhattan(end))
+
     if method == 'debug':
         print("### BFS ###")
         expanded, goal = bfs(root)
@@ -361,26 +429,47 @@ def main():
 
         print("### Greedy ###")
         root = Node(start, 4, None, 0)
-        ex4, goal4 = greedy(root)
+        ex3, goal3 = greedy(root)
+        print_answer(ex3, goal3)
+
+        print("### A* ###")
+        root = Node(start, 4, None, 0)
+        ex4, goal4 = astar(root)
         print_answer(ex4, goal4)
 
-        # print("### A* ###")
-        # root = Node(start, 4, None, 0)
-        # ex3, goal3 = astar(root)
-        # print_answer(ex3, goal3)
-    elif method == 'bfs':
+        print("### Hill Climbing ###")
+        root = Node(start, 4, None, 0)
+        ex5, goal5 = astar(root)
+        print_answer(ex5, goal5)
+
+        print("### IDS ###")
+        root = Node(start, 4, None, 0)
+        ex6, goal6 = ids(root)
+        print_answer(ex6, goal6)
+    elif method == 'b':
         # BFS
         expanded, goal = bfs(root)
         print_answer(expanded, goal)
-    elif method == 'dfs':
+    elif method == 'd':
         # DFS
         ex2, goal2 = dfs(root)
         print_answer(ex2, goal2)
-    elif method == 'astar':
-        # A*
-
-        ex3, goal3 = astar(root)
+    elif method == 'g':
+        # greedy
+        ex3, goal3 = greedy(root)
         print_answer(ex3, goal3)
+    elif method == 'a':
+        # A*
+        ex4, goal4 = astar(root)
+        print_answer(ex4, goal4)
+    elif method == 'h':
+        # Hill Climbing
+        ex5, goal5 = hill(root)
+        print_answer(ex5, goal5)
+    elif method == 'i':
+        # IDS
+        ex6, goal6 = ids(root)
+        print_answer(ex6, goal6)
 
     return 0
 

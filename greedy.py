@@ -1,3 +1,10 @@
+from queue import PriorityQueue, Queue
+import time
+
+start = 320
+target = 110
+forbidden = []
+
 class Node(object):
     def __init__(self, number, changed, parent, depth):
         self.number = number
@@ -26,17 +33,19 @@ class Node(object):
 
 
 def child_creator(parent):
+    # Cannot add to 9
+    # Cannot subtract from 0
     pnum = parent.get_number()
     pchange = parent.get_changed()
 
     up = pnum + 100
     down = pnum - 100
 
-    if pnum < 900 and pchange is not 1:
+    if pnum > 99 and pchange is not 1:
         childA = Node(down, 1, parent, parent.depth + 1)
         parent.add_child(childA)
 
-    if pnum > 200 and pchange is not 1:
+    if pnum < 900 and pchange is not 1:
         childB = Node(up, 1, parent, parent.depth + 1)
         parent.add_child(childB)
 
@@ -44,11 +53,11 @@ def child_creator(parent):
     ptens_up = pnum + 10
     ptens_down = pnum - 10
 
-    if ptens < 90 and pchange is not 2:
+    if ptens > 9 and pchange is not 2:
         childC = Node(ptens_down, 2, parent, parent.depth + 1)
         parent.add_child(childC)
 
-    if ptens > 19 and pchange is not 2:
+    if ptens < 90 and pchange is not 2:
         childD = Node(ptens_up, 2, parent, parent.depth + 1)
         parent.add_child(childD)
 
@@ -56,7 +65,7 @@ def child_creator(parent):
     pones_up = pnum + 1
     pones_down = pnum - 1
 
-    if pones > 1 and pchange is not 3:
+    if pones > 0 and pchange is not 3:
         childE = Node(pones_down, 3, parent, parent.depth + 1)
         parent.add_child(childE)
 
@@ -106,23 +115,51 @@ def multicheck(node, expanded):
     return 0
 
 
+def manhattan(node):
+    number = node.get_number()
+
+    t_hun = int(target / 100)
+    t_ten = int((target % 100) / 10)
+    t_one = (target % 100) % 10
+
+    s_hun = int(number / 100)
+    s_ten = int((number % 100) / 10)
+    s_one = (number % 100) % 10
+
+    dist = (abs(t_hun - s_hun) + abs(t_ten - s_ten) + abs(t_one - s_one))
+    return dist
+
+
 def greedy(root):
-    child_creator(root)
-    
-    fringe = []
-    fringe.append(root)
-    for child in root.get_children():
-        fringe.append(child)
+    fringe = PriorityQueue()
+    expanded = []
+    full = [(0, 0, root)]
+    fringe.put((0, 0, root))
 
-    for node in fringe:
-        print(node.get_number(), node.depth)
+    i = 0
+    while not fringe.empty():
+        node = fringe.get()[2]
+        child_creator(node)
 
-    return fringe, root
+        if multicheck(node, expanded) == 1:
+            continue
+        elif multicheck(node, expanded) == 2:
+            return
+
+        current = node.get_number()
+        expanded.append(node)
+
+        if current is target:
+            break
+        else:
+            for child in node.get_children():
+                priority = manhattan(child)
+                fringe.put((priority, time.time() * -1, child))
+
+    return expanded, node
 
 
 def main():
-    start = 320
-    target = 110
 
     root = Node(start, 4, None, 0)
 
